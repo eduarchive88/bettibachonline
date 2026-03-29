@@ -1,293 +1,419 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>쁘띠바크 온라인</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>쁘띠바크 온라인 🎮</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;900&display=swap');
-    * { font-family: 'Noto Sans KR', sans-serif; }
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+    * { font-family: 'Noto Sans KR', sans-serif; box-sizing: border-box; }
+
+    body {
+      background: linear-gradient(135deg, #fdf4ff 0%, #eff6ff 50%, #f0fdf4 100%);
+      min-height: 100vh;
+    }
 
     .screen { display: none; }
     .screen.active { display: flex; }
 
-    .glass {
-      background: rgba(255,255,255,0.08);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255,255,255,0.15);
+    /* 카드 */
+    .card {
+      background: white;
+      border-radius: 1.25rem;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+      border: 1.5px solid rgba(0,0,0,0.06);
     }
+    .card-purple { border-top: 4px solid #a78bfa; }
+    .card-pink   { border-top: 4px solid #f472b6; }
+    .card-green  { border-top: 4px solid #34d399; }
+    .card-blue   { border-top: 4px solid #60a5fa; }
 
-    .input-field {
-      background: rgba(255,255,255,0.1);
-      border: 1.5px solid rgba(255,255,255,0.25);
-      color: white;
-      border-radius: 0.75rem;
-      padding: 0.65rem 1rem;
-      width: 100%;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .input-field::placeholder { color: rgba(255,255,255,0.4); }
-    .input-field:focus {
-      outline: none;
-      border-color: #a78bfa;
-      box-shadow: 0 0 0 3px rgba(167,139,250,0.3);
-    }
-    .input-field:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
+    /* 버튼 */
     .btn {
-      border-radius: 0.75rem;
-      padding: 0.7rem 1.5rem;
+      border-radius: 0.875rem;
+      padding: 0.65rem 1.4rem;
       font-weight: 700;
+      font-size: 0.95rem;
       transition: all 0.15s;
       cursor: pointer;
       border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
     }
     .btn:active { transform: scale(0.97); }
-    .btn-primary { background: #7c3aed; color: white; }
-    .btn-primary:hover { background: #6d28d9; }
-    .btn-primary:disabled { background: #4b5563; cursor: not-allowed; transform: none; }
-    .btn-danger  { background: #dc2626; color: white; }
-    .btn-danger:hover  { background: #b91c1c; }
-    .btn-success { background: #059669; color: white; }
-    .btn-success:hover { background: #047857; }
-    .btn-ghost   { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); }
-    .btn-ghost:hover { background: rgba(255,255,255,0.18); }
+    .btn-purple { background: #7c3aed; color: white; }
+    .btn-purple:hover { background: #6d28d9; }
+    .btn-purple:disabled { background: #c4b5fd; cursor: not-allowed; transform: none; }
+    .btn-pink   { background: #ec4899; color: white; }
+    .btn-pink:hover { background: #db2777; }
+    .btn-red    { background: #ef4444; color: white; }
+    .btn-red:hover { background: #dc2626; }
+    .btn-green  { background: #10b981; color: white; }
+    .btn-green:hover { background: #059669; }
+    .btn-gray   { background: #f3f4f6; color: #374151; border: 1.5px solid #e5e7eb; }
+    .btn-gray:hover { background: #e5e7eb; }
+    .btn-outline-purple { background: white; color: #7c3aed; border: 2px solid #a78bfa; }
+    .btn-outline-purple:hover { background: #faf5ff; }
+    .btn-outline-purple.active { background: #7c3aed; color: white; border-color: #7c3aed; }
 
-    .letter-badge {
-      font-size: 5rem;
-      font-weight: 900;
-      line-height: 1;
-      background: linear-gradient(135deg, #a78bfa, #60a5fa);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+    /* 입력 */
+    .input-field {
+      border: 1.5px solid #e5e7eb;
+      border-radius: 0.75rem;
+      padding: 0.6rem 0.9rem;
+      width: 100%;
+      font-size: 0.95rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      background: white;
+      color: #111827;
     }
+    .input-field:focus {
+      outline: none;
+      border-color: #a78bfa;
+      box-shadow: 0 0 0 3px rgba(167,139,250,0.2);
+    }
+    .input-field:disabled { background: #f9fafb; color: #9ca3af; cursor: not-allowed; }
 
-    .answer-row { transition: background 0.2s; }
-    .answer-row.duplicate { background: rgba(239,68,68,0.15); }
-    .answer-row.unique    { background: rgba(16,185,129,0.1); }
-
-    .score-badge {
-      display: inline-block;
-      padding: 0.15rem 0.6rem;
+    /* 태그/배지 */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 0.2rem 0.65rem;
       border-radius: 9999px;
       font-size: 0.75rem;
       font-weight: 700;
     }
-    .badge-valid   { background: #059669; color: white; }
-    .badge-invalid { background: #dc2626; color: white; }
-    .badge-dup     { background: #d97706; color: white; }
+    .badge-valid   { background: #d1fae5; color: #065f46; }
+    .badge-invalid { background: #fee2e2; color: #991b1b; }
+    .badge-dup     { background: #fef3c7; color: #92400e; }
+    .badge-stop    { background: #fce7f3; color: #9d174d; }
+    .badge-empty   { background: #f3f4f6; color: #6b7280; }
 
+    /* 플레이어 칩 */
     .player-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      padding: 0.3rem 0.8rem;
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      padding: 0.3rem 0.75rem;
       border-radius: 9999px;
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.2);
-      font-size: 0.85rem;
+      font-size: 0.82rem; font-weight: 600;
+      background: #f5f3ff; color: #5b21b6;
+      border: 1.5px solid #ddd6fe;
     }
-    .player-chip.host { border-color: #a78bfa; background: rgba(167,139,250,0.15); }
+    .player-chip.host { background: #fdf4ff; color: #7e22ce; border-color: #e9d5ff; }
+    .player-chip.team { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+
+    /* 초성 배지 */
+    .letter-display {
+      font-size: 5rem; font-weight: 900; line-height: 1;
+      background: linear-gradient(135deg, #7c3aed, #ec4899);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* STOP 버튼 글로우 */
+    .stop-glow {
+      box-shadow: 0 0 0 0 rgba(239,68,68,0.4);
+      animation: stopPulse 2s infinite;
+    }
+    @keyframes stopPulse {
+      0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+      70%  { box-shadow: 0 0 0 12px rgba(239,68,68,0); }
+      100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+    }
+
+    /* 점수표 */
+    .score-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .score-table th {
+      background: #f5f3ff; color: #5b21b6;
+      padding: 0.5rem 0.4rem; text-align: center;
+      border: 1px solid #ede9fe; font-weight: 700;
+      white-space: nowrap;
+    }
+    .score-table td {
+      padding: 0.45rem 0.4rem; text-align: center;
+      border: 1px solid #f3f4f6; color: #374151;
+    }
+    .score-table tr:nth-child(even) td { background: #fafafa; }
+    .score-table td.active-round { background: #fdf4ff; font-weight: 700; }
+    .score-table td.score-cell { font-weight: 700; color: #7c3aed; }
+    .score-table tr.total-row td { background: #f5f3ff; font-weight: 900; color: #5b21b6; border-top: 2px solid #a78bfa; }
+
+    /* 리뷰 행 */
+    .review-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.6rem 0.75rem; border-radius: 0.75rem;
+      border: 1.5px solid #f3f4f6;
+      transition: border-color 0.2s, background 0.2s;
+      gap: 0.5rem;
+    }
+    .review-row.valid   { border-color: #a7f3d0; background: #f0fdf4; }
+    .review-row.invalid { border-color: #fecaca; background: #fff5f5; }
+    .review-row.stopper-dup { border-color: #fbcfe8; background: #fdf2f8; }
+
+    /* 토글 스위치 */
+    .toggle-btn {
+      padding: 0.25rem 0.6rem; border-radius: 0.5rem;
+      font-size: 0.75rem; font-weight: 700; cursor: pointer;
+      border: 1.5px solid transparent; transition: all 0.15s;
+    }
+    .toggle-btn.valid   { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+    .toggle-btn.invalid { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+
+    /* 모드 선택 카드 */
+    .mode-card {
+      border: 2px solid #e5e7eb; border-radius: 1rem;
+      padding: 1rem; cursor: pointer; transition: all 0.15s;
+      text-align: center;
+    }
+    .mode-card:hover { border-color: #a78bfa; background: #faf5ff; }
+    .mode-card.selected { border-color: #7c3aed; background: #f5f3ff; }
+
+    /* 스크롤 */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-thumb { background: #ddd6fe; border-radius: 3px; }
+
+    /* 반응형 점수표 래퍼 */
+    .table-wrap { overflow-x: auto; border-radius: 0.75rem; }
 
     .pulse-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: #4ade80;
-      animation: pulse 1.5s infinite;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #34d399; animation: pdot 1.5s infinite;
     }
-    @keyframes pulse {
-      0%,100% { opacity: 1; transform: scale(1); }
-      50%      { opacity: 0.5; transform: scale(1.4); }
+    @keyframes pdot {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:0.4; transform:scale(1.5); }
     }
 
-    .stop-btn-wrap { position: relative; }
-    .stop-btn-wrap::before {
-      content: '';
-      position: absolute; inset: -3px;
-      border-radius: 0.9rem;
-      background: linear-gradient(135deg, #ef4444, #f97316);
-      z-index: -1;
-      animation: glow 2s ease-in-out infinite;
-    }
-    @keyframes glow {
-      0%,100% { opacity: 0.6; }
-      50%      { opacity: 1; }
-    }
-
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+    select.input-field { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; padding-right: 2rem; }
   </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white flex flex-col items-center justify-center p-4">
+<body class="flex flex-col items-center justify-start p-4 pb-16">
 
-  <!-- ══════════════════════════════════════════
-       SCREEN 1 · 로비 (닉네임 + 방 코드 입력)
-  ══════════════════════════════════════════ -->
-  <div id="screen-lobby" class="screen active flex-col items-center w-full max-w-md gap-6">
+<!-- ════════════════════════════════════════
+     SCREEN 1 · 로비
+════════════════════════════════════════ -->
+<div id="screen-lobby" class="screen active flex-col items-center w-full max-w-md gap-5 pt-8">
 
-    <div class="text-center">
-      <h1 class="text-5xl font-black tracking-tight bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent">
-        쁘띠바크
-      </h1>
-      <p class="text-slate-400 mt-1 text-sm">Petit Bac · 온라인 멀티플레이</p>
-    </div>
-
-    <div class="glass rounded-2xl p-6 w-full space-y-4">
-      <div class="space-y-1">
-        <label class="text-sm font-semibold text-slate-300">닉네임</label>
-        <input id="input-nickname" class="input-field" type="text" placeholder="게임에서 사용할 이름" maxlength="12" />
-      </div>
-      <div class="space-y-1">
-        <label class="text-sm font-semibold text-slate-300">방 코드</label>
-        <input id="input-roomid" class="input-field" type="text" placeholder="친구와 공유할 코드 (예: APPLE)" maxlength="20"
-               style="text-transform:uppercase" />
-        <p class="text-xs text-slate-500">같은 코드를 입력하면 같은 방에 입장합니다.</p>
-      </div>
-      <button id="btn-join" class="btn btn-primary w-full text-base mt-2" disabled>입장하기</button>
-    </div>
-
-    <div class="glass rounded-2xl p-4 w-full text-sm text-slate-300 space-y-2">
-      <p class="font-bold text-white">📖 게임 방법</p>
-      <ul class="space-y-1 list-disc list-inside text-slate-400">
-        <li><strong class="text-violet-300">방 코드를 가장 먼저 입력한 사람이 방장</strong>이 됩니다.</li>
-        <li>방장이 라운드를 시작하면 <strong class="text-white">초성(시작 글자)</strong>이 공개됩니다.</li>
-        <li>6개 카테고리에 해당 초성으로 시작하는 단어를 입력하세요.</li>
-        <li>모두 채웠다면 <strong class="text-red-400">STOP!</strong> — 즉시 라운드 종료.</li>
-        <li>STOP을 외친 사람의 답과 <strong class="text-white">같은 답을 적은 사람이 있으면</strong>, STOP 외친 사람은 <strong class="text-red-400">0점</strong>, 같은 답을 적은 사람이 <strong class="text-green-400">10점</strong>을 가져갑니다.</li>
-        <li>STOP 외친 사람의 답이 유일하면 그 사람도 <strong class="text-green-400">10점</strong>입니다.</li>
-        <li>유효 답변 1개당 <strong class="text-green-400">10점</strong>, 총 7라운드 후 최고 점수 플레이어가 승리!</li>
-      </ul>
-    </div>
+  <div class="text-center">
+    <div class="text-5xl mb-2">🎮</div>
+    <h1 class="text-4xl font-black text-purple-700 tracking-tight">쁘띠바크</h1>
+    <p class="text-slate-400 text-sm mt-1">Petit Bac · 온라인 멀티플레이</p>
   </div>
 
-  <!-- ══════════════════════════════════════════
-       SCREEN 2 · 대기실
-  ══════════════════════════════════════════ -->
-  <div id="screen-waiting" class="screen flex-col items-center w-full max-w-lg gap-6">
-
-    <div class="text-center">
-      <p class="text-slate-400 text-sm">방 코드</p>
-      <h2 id="waiting-roomid" class="text-3xl font-black tracking-widest text-violet-300"></h2>
+  <div class="card card-purple p-6 w-full space-y-4">
+    <div class="space-y-1">
+      <label class="text-sm font-bold text-slate-600">닉네임 <span class="text-pink-400">*</span></label>
+      <input id="input-nickname" class="input-field" type="text" placeholder="게임에서 사용할 이름" maxlength="12"/>
+      <p class="text-xs text-slate-400">모둠전에서는 같은 닉네임 = 같은 모둠이에요!</p>
     </div>
-
-    <div class="glass rounded-2xl p-6 w-full space-y-4">
-      <div class="flex items-center justify-between">
-        <span class="font-bold text-slate-200">참가자</span>
-        <span id="waiting-count" class="text-sm text-slate-400"></span>
-      </div>
-      <div id="waiting-players" class="flex flex-wrap gap-2"></div>
+    <div class="space-y-1">
+      <label class="text-sm font-bold text-slate-600">방 코드 <span class="text-pink-400">*</span></label>
+      <input id="input-roomid" class="input-field" type="text" placeholder="친구와 공유할 코드 (예: APPLE)" maxlength="20" style="text-transform:uppercase"/>
+      <p class="text-xs text-slate-400">같은 코드 입력 시 같은 방에 입장합니다.</p>
     </div>
-
-    <div id="host-controls" class="hidden w-full space-y-3">
-      <button id="btn-start-round" class="btn btn-primary w-full text-base">
-        ▶ 라운드 시작
-      </button>
-      <p class="text-xs text-center text-slate-500">방장만 라운드를 시작할 수 있습니다.</p>
-    </div>
-
-    <div id="guest-waiting" class="hidden glass rounded-xl p-4 w-full text-center text-slate-400 text-sm">
-      방장이 라운드를 시작할 때까지 기다려 주세요…
-    </div>
-
-    <div id="waiting-scoreboard" class="hidden glass rounded-2xl p-4 w-full space-y-2">
-      <p class="font-bold text-slate-200 text-sm">현재 점수</p>
-      <div id="waiting-scores" class="space-y-1"></div>
-    </div>
+    <button id="btn-join" class="btn btn-purple w-full text-base" disabled>입장하기 →</button>
   </div>
 
-  <!-- ══════════════════════════════════════════
-       SCREEN 3 · 게임 진행
-  ══════════════════════════════════════════ -->
-  <div id="screen-game" class="screen flex-col items-center w-full max-w-lg gap-5">
-
-    <div class="w-full flex items-center justify-between">
-      <span id="game-round-badge" class="text-sm font-bold text-slate-400"></span>
-      <div class="flex items-center gap-2">
-        <div class="pulse-dot"></div>
-        <span class="text-xs text-slate-400">실시간</span>
-      </div>
-    </div>
-
-    <div class="glass rounded-2xl p-6 w-full text-center space-y-1">
-      <p class="text-slate-400 text-sm font-semibold">이번 라운드 시작 글자</p>
-      <div id="game-letter" class="letter-badge">?</div>
-      <p class="text-slate-500 text-xs">이 초성으로 시작하는 단어를 입력하세요</p>
-    </div>
-
-    <div id="game-inputs" class="w-full space-y-2"></div>
-
-    <div class="stop-btn-wrap w-full relative z-0">
-      <button id="btn-stop" class="btn btn-danger w-full text-lg py-4">
-        🛑 STOP!
-      </button>
-    </div>
-
-    <p id="stop-notice" class="hidden text-center text-amber-400 font-bold text-sm animate-pulse">
-      누군가 STOP을 눌렀습니다! 답변을 제출하는 중…
-    </p>
+  <div class="card p-5 w-full space-y-3">
+    <p class="font-bold text-slate-700 text-sm">📖 게임 방법</p>
+    <ul class="space-y-1.5 text-xs text-slate-500 list-none">
+      <li>🏠 방 코드를 <strong class="text-purple-600">가장 먼저 입력한 사람이 방장</strong>이 됩니다.</li>
+      <li>👥 모둠전에서는 <strong class="text-blue-600">같은 닉네임끼리 한 팀</strong>으로 공동 입력해요.</li>
+      <li>🔤 방장이 시작하면 <strong class="text-purple-600">초성(시작 글자)</strong>이 공개됩니다.</li>
+      <li>✍️ 6개 카테고리에 해당 초성으로 시작하는 단어를 입력하세요.</li>
+      <li>🛑 모두 채웠다면 <strong class="text-red-500">STOP!</strong> — 즉시 라운드 종료.</li>
+      <li>⚠️ STOP 외친 사람의 답과 <strong class="text-pink-600">같은 답을 적은 사람이 있으면</strong>, STOP 외친 사람은 0점, 같은 답을 적은 사람이 10점을 가져갑니다.</li>
+      <li>✅ STOP 외친 사람의 답이 유일하면 그 사람도 10점!</li>
+      <li>🏆 라운드 수는 방장이 설정하며, 최고 점수 팀/플레이어가 승리!</li>
+    </ul>
   </div>
 
-  <!-- ══════════════════════════════════════════
-       SCREEN 4 · 결과 리뷰
-  ══════════════════════════════════════════ -->
-  <div id="screen-review" class="screen flex-col items-center w-full max-w-2xl gap-5">
-
-    <div class="w-full flex items-center justify-between">
-      <h2 class="text-xl font-black text-white">라운드 결과</h2>
-      <span id="review-letter-badge" class="text-slate-400 text-sm font-bold"></span>
-    </div>
-
-    <p class="text-slate-400 text-sm text-center w-full">
-      ✅ 초성 일치 여부는 자동 채점됩니다. 중복 답변은 🟡로 표시됩니다.<br/>
-      <span class="text-violet-400 font-semibold" id="review-host-note"></span>
-    </p>
-
-    <div id="review-table" class="w-full space-y-4"></div>
-
-    <!-- 점수 확정 (방장만) -->
-    <div id="review-host-actions" class="hidden w-full glass rounded-2xl p-4 space-y-3">
-      <p class="text-sm font-bold text-slate-200">점수 확정</p>
-      <p class="text-xs text-slate-400">중복·오답 여부를 확인한 뒤 각 답변의 유효/무효를 결정하고 확정하세요.</p>
-      <button id="btn-confirm-scores" class="btn btn-success w-full">점수 확정 및 다음 라운드</button>
-    </div>
-    <div id="review-guest-wait" class="hidden glass rounded-xl p-3 w-full text-center text-slate-400 text-sm">
-      방장이 점수를 확정하는 중입니다…
-    </div>
-  </div>
-
-  <!-- ══════════════════════════════════════════
-       SCREEN 5 · 최종 결과
-  ══════════════════════════════════════════ -->
-  <div id="screen-final" class="screen flex-col items-center w-full max-w-md gap-6">
-    <div class="text-center">
-      <p class="text-4xl mb-2">🏆</p>
-      <h2 class="text-3xl font-black text-white">게임 종료!</h2>
-      <p class="text-slate-400 text-sm mt-1">7라운드 최종 결과</p>
-    </div>
-    <div id="final-scoreboard" class="glass rounded-2xl p-6 w-full space-y-3"></div>
-    <button id="btn-restart" class="btn btn-ghost w-full">새 게임 시작</button>
-  </div>
-
-  <footer class="w-full text-center text-xs text-slate-600 py-6 mt-4 space-y-1">
+  <footer class="text-center text-xs text-slate-400 space-y-1 pt-2">
     <p>만든 사람: 경기도 지구과학 교사 뀨짱</p>
-    <p class="space-x-3">
-      <span>문의:
-        <a href="https://open.kakao.com/o/s7hVU65h" target="_blank" class="text-violet-500 hover:text-violet-400 underline">카카오톡 오픈채팅</a>
-      </span>
+    <p class="space-x-2">
+      <span>문의: <a href="https://open.kakao.com/o/s7hVU65h" target="_blank" class="text-purple-500 hover:underline">카카오톡 오픈채팅</a></span>
       <span>·</span>
-      <span>블로그:
-        <a href="https://eduarchive.tistory.com/" target="_blank" class="text-violet-500 hover:text-violet-400 underline">뀨짱쌤의 교육자료 아카이브</a>
-      </span>
+      <span>블로그: <a href="https://eduarchive.tistory.com/" target="_blank" class="text-purple-500 hover:underline">뀨짱쌤의 교육자료 아카이브</a></span>
     </p>
   </footer>
+</div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="/script.js"></script>
+<!-- ════════════════════════════════════════
+     SCREEN 2 · 대기실
+════════════════════════════════════════ -->
+<div id="screen-waiting" class="screen flex-col items-center w-full max-w-2xl gap-5 pt-8">
+
+  <div class="w-full flex items-center justify-between">
+    <div>
+      <p class="text-xs text-slate-400">방 코드</p>
+      <h2 id="waiting-roomid" class="text-2xl font-black text-purple-700 tracking-widest"></h2>
+    </div>
+    <div class="text-right">
+      <p class="text-xs text-slate-400" id="waiting-mode-label"></p>
+      <p class="text-sm font-bold text-slate-600" id="waiting-round-label"></p>
+    </div>
+  </div>
+
+  <!-- 방장 설정 패널 -->
+  <div id="host-settings" class="hidden card card-purple p-5 w-full space-y-4">
+    <p class="font-bold text-purple-700 text-sm">⚙️ 방장 설정</p>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="space-y-1">
+        <label class="text-xs font-bold text-slate-500">게임 모드</label>
+        <div class="flex gap-2">
+          <button id="mode-individual" class="btn btn-outline-purple flex-1 text-xs active" onclick="setMode('individual')">👤 개인전</button>
+          <button id="mode-team"       class="btn btn-outline-purple flex-1 text-xs"        onclick="setMode('team')">👥 모둠전</button>
+        </div>
+      </div>
+      <div class="space-y-1">
+        <label class="text-xs font-bold text-slate-500">라운드 수</label>
+        <select id="select-rounds" class="input-field text-sm">
+          <option value="3">3라운드</option>
+          <option value="5">5라운드</option>
+          <option value="7" selected>7라운드</option>
+          <option value="10">10라운드</option>
+        </select>
+      </div>
+    </div>
+    <div class="space-y-1">
+      <label class="text-xs font-bold text-slate-500">방장 참여 여부</label>
+      <div class="flex gap-2">
+        <button id="host-play"    class="btn btn-outline-purple flex-1 text-xs active" onclick="setHostRole('play')">🎮 참여</button>
+        <button id="host-spectate" class="btn btn-outline-purple flex-1 text-xs"      onclick="setHostRole('spectate')">📺 운영만 (관전)</button>
+      </div>
+    </div>
+    <button id="btn-start-round" class="btn btn-purple w-full">▶ 라운드 시작</button>
+  </div>
+
+  <!-- 참가자 목록 -->
+  <div class="card p-5 w-full space-y-3">
+    <div class="flex items-center justify-between">
+      <span class="font-bold text-slate-700 text-sm">참가자</span>
+      <span id="waiting-count" class="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full"></span>
+    </div>
+    <div id="waiting-players" class="flex flex-wrap gap-2"></div>
+  </div>
+
+  <!-- 게스트 대기 메시지 -->
+  <div id="guest-waiting" class="hidden card p-4 w-full text-center text-slate-400 text-sm">
+    ⏳ 방장이 라운드를 시작할 때까지 기다려 주세요…
+  </div>
+
+  <!-- 누적 점수표 -->
+  <div id="waiting-scoreboard" class="hidden card p-5 w-full space-y-3">
+    <p class="font-bold text-slate-700 text-sm">📊 누적 점수표</p>
+    <div class="table-wrap" id="score-table-wrap"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCREEN 3 · 게임 진행
+════════════════════════════════════════ -->
+<div id="screen-game" class="screen flex-col items-center w-full max-w-lg gap-4 pt-6">
+
+  <div class="w-full flex items-center justify-between">
+    <span id="game-round-badge" class="text-sm font-bold text-purple-600 bg-purple-50 px-3 py-1 rounded-full"></span>
+    <div class="flex items-center gap-1.5">
+      <div class="pulse-dot"></div>
+      <span class="text-xs text-slate-400">실시간</span>
+    </div>
+  </div>
+
+  <div class="card card-purple p-5 w-full text-center space-y-1">
+    <p class="text-slate-400 text-xs font-semibold">이번 라운드 시작 글자</p>
+    <div id="game-letter" class="letter-display">?</div>
+    <p class="text-slate-400 text-xs">이 초성으로 시작하는 단어를 입력하세요</p>
+  </div>
+
+  <div id="game-inputs" class="w-full space-y-2"></div>
+
+  <button id="btn-stop" class="btn btn-red w-full text-lg py-4 stop-glow">🛑 STOP!</button>
+
+  <p id="stop-notice" class="hidden text-center text-pink-500 font-bold text-sm animate-pulse"></p>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCREEN 3b · 운영자(관전) 화면
+════════════════════════════════════════ -->
+<div id="screen-spectate" class="screen flex-col items-center w-full max-w-2xl gap-5 pt-8">
+  <div class="card card-purple p-5 w-full text-center space-y-2">
+    <p class="text-xs text-slate-400">진행 중</p>
+    <div class="flex items-center justify-center gap-4">
+      <span id="spec-round" class="text-sm font-bold text-purple-600 bg-purple-50 px-3 py-1 rounded-full"></span>
+      <div class="text-center">
+        <p class="text-xs text-slate-400">시작 글자</p>
+        <div id="spec-letter" class="letter-display" style="font-size:3rem">?</div>
+      </div>
+    </div>
+  </div>
+  <div class="card p-5 w-full space-y-3">
+    <p class="font-bold text-slate-700 text-sm">📊 실시간 점수표</p>
+    <div class="table-wrap" id="spec-score-table-wrap"></div>
+  </div>
+  <p id="spec-stop-notice" class="hidden text-center text-pink-500 font-bold text-sm animate-pulse"></p>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCREEN 4 · 라운드 리뷰
+════════════════════════════════════════ -->
+<div id="screen-review" class="screen flex-col items-center w-full max-w-2xl gap-5 pt-6">
+
+  <div class="w-full flex items-center justify-between">
+    <h2 class="text-xl font-black text-slate-800">라운드 결과 채점</h2>
+    <span id="review-letter-badge" class="text-sm font-bold text-purple-600 bg-purple-50 px-3 py-1 rounded-full"></span>
+  </div>
+
+  <div class="card p-4 w-full text-xs text-slate-500 space-y-1">
+    <p>🟢 <strong class="text-green-700">유효</strong> — 초성 일치, STOP 외친 사람과 중복 없음</p>
+    <p>🔴 <strong class="text-red-600">무효</strong> — 초성 불일치 또는 STOP 외친 사람과 같은 답 (STOP 외친 사람만 0점)</p>
+    <p>🟡 <strong class="text-amber-600">중복(STOP)</strong> — STOP 외친 사람의 답과 동일 → 해당 사람 0점, 나머지 10점</p>
+    <p id="review-host-note" class="text-purple-600 font-semibold mt-1"></p>
+  </div>
+
+  <div id="review-table" class="w-full space-y-3"></div>
+
+  <!-- 이번 라운드 점수 미리보기 -->
+  <div class="card p-4 w-full space-y-2">
+    <p class="font-bold text-slate-700 text-sm">이번 라운드 점수 미리보기</p>
+    <div id="review-score-preview" class="space-y-1"></div>
+  </div>
+
+  <div id="review-host-actions" class="hidden card card-green p-4 w-full space-y-2">
+    <button id="btn-confirm-scores" class="btn btn-green w-full">✅ 점수 확정 및 다음 라운드</button>
+  </div>
+  <div id="review-guest-wait" class="hidden card p-3 w-full text-center text-slate-400 text-sm">
+    ⏳ 방장이 점수를 확정하는 중입니다…
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCREEN 5 · 최종 결과
+════════════════════════════════════════ -->
+<div id="screen-final" class="screen flex-col items-center w-full max-w-2xl gap-5 pt-8">
+  <div class="text-center">
+    <div class="text-5xl mb-2">🏆</div>
+    <h2 class="text-3xl font-black text-slate-800">게임 종료!</h2>
+    <p class="text-slate-400 text-sm mt-1">최종 결과</p>
+  </div>
+  <div class="card p-5 w-full space-y-3">
+    <p class="font-bold text-slate-700 text-sm">📊 최종 점수표</p>
+    <div class="table-wrap" id="final-score-table-wrap"></div>
+  </div>
+  <div id="final-podium" class="card p-5 w-full space-y-2"></div>
+  <button id="btn-restart" class="btn btn-gray w-full">🔄 새 게임 시작</button>
+
+  <footer class="text-center text-xs text-slate-400 space-y-1 pt-2">
+    <p>만든 사람: 경기도 지구과학 교사 뀨짱</p>
+    <p class="space-x-2">
+      <span>문의: <a href="https://open.kakao.com/o/s7hVU65h" target="_blank" class="text-purple-500 hover:underline">카카오톡 오픈채팅</a></span>
+      <span>·</span>
+      <span>블로그: <a href="https://eduarchive.tistory.com/" target="_blank" class="text-purple-500 hover:underline">뀨짱쌤의 교육자료 아카이브</a></span>
+    </p>
+  </footer>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/script.js"></script>
 </body>
 </html>

@@ -5,26 +5,21 @@ const { Server } = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-
 app.use(express.static('public'));
 
 // ── 상수 ──────────────────────────────────────────────
 const CONSONANTS = ['ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
 const CATEGORIES = [
-  { id: 'name',   label: '유명인 / 역사적 인물' },
+  { id: 'name',   label: '유명인/역사적 인물' },
   { id: 'animal', label: '동물' },
-  { id: 'city',   label: '도시 / 나라' },
-  { id: 'food',   label: '음식 / 요리' },
-  { id: 'thing',  label: '물건 / 도구' },
+  { id: 'city',   label: '도시/나라' },
+  { id: 'food',   label: '음식/요리' },
+  { id: 'thing',  label: '물건/도구' },
   { id: 'sport',  label: '스포츠' },
 ];
-const TOTAL_ROUNDS = 7;
 
-// ── 인메모리 방 저장소 ────────────────────────────────
-// rooms[roomId] = { players, hostId, round, letter, phase, answers, scores }
 const rooms = {};
 
-// ── 유틸 ──────────────────────────────────────────────
 function seedLetter(roomId, round) {
   let hash = 0;
   const str = roomId + round;
@@ -37,52 +32,79 @@ function seedLetter(roomId, round) {
 
 function getRoom(roomId) { return rooms[roomId]; }
 
+// 플레이어 요약 (모둠명 포함)
 function roomSummary(room) {
-  return room.players.map(p => ({
-    id: p.id,
-    nickname: p.nickname,
-    score: room.scores[p.id] ?? 0,
-    isHost: p.id === room.hostId,
+  // 개인전
+  if (room.mode === 'individual') {
+    return room.players.map(p => ({
+      id: p.id,
+      nickname: p.nickname,
+      score: room.scores[p.nickname] ?? 0,
+      isHost: p.id === room.hostId,
+      isSpectator: p.spectator ?? false,
+    }));
+  }
+  // 모둠전: 모둠(닉네임)별로 묶어서 반환
+  const teams = {};
+  room.players.forEach(p => {
+    if (!teams[p.nickname]) {
+      teams[p.nickname] = { nickname: p.nickname, members: [], score: room.scores[p.nickname] ?? 0 };
+    }
+    teams[p.nickname].members.push(p.id);
+    if (p.id === room.hostId) teams[p.nickname].isHost = true;
+  });
+  return Object.values(teams).map(t => ({
+    id: t.nickname,           // 모둠전에서는 닉네임이 고유 ID
+    nickname: t.nickname,
+    score: t.score,
+    isHost: t.isHost ?? false,
+    members: t.members,
   }));
 }
 
-// ── Socket.io ─────────────────────────────────────────
 io.on('connection', (socket) => {
 
-  // 방 입장
-  socket.on('join_room', ({ roomId, nickname }) => {
+  // ── 방 입장 ──────────────────────────────────────────
+  socket.on('join_room', ({ roomId, nickname, mode, totalRounds, spectator }) => {
     if (!roomId || !nickname) return;
 
-    if (!rooms[roomId]) {
+    const isNewRoom = !rooms[roomId];
+    if (isNewRoom) {
       rooms[roomId] = {
         players: [],
         hostId: socket.id,
         round: 0,
         letter: null,
-        phase: 'lobby',   // lobby | playing | review
-        answers: {},      // { socketId: { categoryId: answer } }
-        scores: {},       // { socketId: totalScore }
-        stopper: null,    // 이번 라운드 STOP 누른 사람
+        phase: 'lobby',
+        answers: {},        // 개인전: { socketId: {catId: ans} } / 모둠전: { teamName: {catId: ans} }
+        scores: {},         // { nickname/teamName: totalScore }
+        stopper: null,      // 이번 라운드 STOP 누른 팀/개인 식별자
+        stopperSocketId: null,
+        mode: mode || 'individual',
+        totalRounds: totalRounds || 7,
+        roundHistory: [],   // [{ round, letter, scores: {id: pts} }]
+        submittedTeams: new Set(), // 모둠전에서 제출 완료한 팀
       };
     }
 
     const room = rooms[roomId];
 
-    // 재접속 처리: 같은 닉네임이 이미 있으면 id 교체
-    const existing = room.players.find(p => p.nickname === nickname);
+    // 재접속: 같은 소켓ID 또는 같은 닉네임(개인전) 처리
+    const existing = room.players.find(p =>
+      room.mode === 'individual' ? p.nickname === nickname && !p.spectator : p.id === socket.id
+    );
     if (existing) {
       existing.id = socket.id;
-      room.scores[socket.id] = room.scores[existing.id] ?? 0;
     } else {
-      room.players.push({ id: socket.id, nickname });
-      room.scores[socket.id] = 0;
+      room.players.push({ id: socket.id, nickname, spectator: spectator ?? false });
+      if (!room.scores[nickname]) room.scores[nickname] = 0;
     }
 
     socket.join(roomId);
     socket.data.roomId = roomId;
     socket.data.nickname = nickname;
+    socket.data.spectator = spectator ?? false;
 
-    // 입장한 본인에게 현재 방 상태 전송
     socket.emit('room_state', {
       roomId,
       isHost: socket.id === room.hostId,
@@ -90,15 +112,26 @@ io.on('connection', (socket) => {
       round: room.round,
       letter: room.letter,
       categories: CATEGORIES,
-      totalRounds: TOTAL_ROUNDS,
+      totalRounds: room.totalRounds,
+      mode: room.mode,
       players: roomSummary(room),
+      roundHistory: room.roundHistory,
+      spectator: spectator ?? false,
     });
 
-    // 나머지 플레이어에게 입장 알림
     socket.to(roomId).emit('player_joined', { players: roomSummary(room) });
   });
 
-  // 방장이 라운드 시작
+  // ── 방장: 설정 업데이트 (라운드 수, 모드) ────────────
+  socket.on('update_settings', ({ totalRounds, mode }) => {
+    const room = getRoom(socket.data.roomId);
+    if (!room || socket.id !== room.hostId) return;
+    if (totalRounds) room.totalRounds = totalRounds;
+    if (mode) room.mode = mode;
+    io.to(socket.data.roomId).emit('settings_updated', { totalRounds: room.totalRounds, mode: room.mode });
+  });
+
+  // ── 방장: 라운드 시작 ────────────────────────────────
   socket.on('start_round', () => {
     const roomId = socket.data.roomId;
     const room = getRoom(roomId);
@@ -110,110 +143,146 @@ io.on('connection', (socket) => {
     room.phase = 'playing';
     room.answers = {};
     room.stopper = null;
+    room.stopperSocketId = null;
+    room.submittedTeams = new Set();
 
     io.to(roomId).emit('round_started', {
       round: room.round,
       letter: room.letter,
-      totalRounds: TOTAL_ROUNDS,
+      totalRounds: room.totalRounds,
     });
   });
 
-  // 누군가 STOP! 을 누름
+  // ── STOP! ────────────────────────────────────────────
   socket.on('stop', () => {
     const roomId = socket.data.roomId;
     const room = getRoom(roomId);
     if (!room || room.phase !== 'playing') return;
+    if (socket.data.spectator) return;
 
     room.phase = 'collecting';
-    room.stopper = socket.id;
+    room.stopperSocketId = socket.id;
+    // 모둠전이면 팀명, 개인전이면 소켓ID
+    room.stopper = room.mode === 'team' ? socket.data.nickname : socket.id;
 
-    // 모든 클라이언트에게 입력 잠금 + 답변 제출 요청
     io.to(roomId).emit('collect_answers', {
-      stopperId: socket.id,
+      stopperId: room.stopper,
       stopperNickname: socket.data.nickname,
     });
   });
 
-  // 각 클라이언트가 답변 제출
+  // ── 모둠전: 실시간 입력 동기화 ───────────────────────
+  socket.on('team_input', ({ catId, value }) => {
+    const roomId = socket.data.roomId;
+    const room = getRoom(roomId);
+    if (!room || room.phase !== 'playing') return;
+    // 같은 팀(닉네임)에게만 브로드캐스트
+    socket.to(roomId).emit('team_input_update', {
+      team: socket.data.nickname,
+      catId,
+      value,
+    });
+  });
+
+  // ── 답변 제출 ────────────────────────────────────────
   socket.on('submit_answers', (answers) => {
     const roomId = socket.data.roomId;
     const room = getRoom(roomId);
     if (!room || room.phase !== 'collecting') return;
+    if (socket.data.spectator) return;
 
-    room.answers[socket.id] = answers; // { categoryId: string }
+    if (room.mode === 'team') {
+      const team = socket.data.nickname;
+      if (room.submittedTeams.has(team)) return; // 팀에서 이미 제출
+      room.submittedTeams.add(team);
+      room.answers[team] = answers;
 
-    // 모든 플레이어가 제출했으면 결과 브로드캐스트
-    if (Object.keys(room.answers).length >= room.players.length) {
-      room.phase = 'review';
-
-      // 답변 목록 구성: { categoryId: [ { nickname, answer } ] }
-      const compiled = {};
-      CATEGORIES.forEach(cat => { compiled[cat.id] = []; });
-
-      room.players.forEach(p => {
-        const playerAnswers = room.answers[p.id] ?? {};
-        CATEGORIES.forEach(cat => {
-          compiled[cat.id].push({
-            playerId: p.id,
-            nickname: p.nickname,
-            answer: (playerAnswers[cat.id] ?? '').trim(),
-          });
-        });
-      });
-
-      io.to(roomId).emit('review_started', {
-        letter: room.letter,
-        compiled,
-        categories: CATEGORIES,
-        stopperId: room.stopper,
-      });
+      // 모든 팀이 제출했는지 확인
+      const teams = [...new Set(room.players.filter(p => !p.spectator).map(p => p.nickname))];
+      if (room.submittedTeams.size >= teams.length) broadcastReview(roomId);
+    } else {
+      room.answers[socket.id] = answers;
+      const activePlayers = room.players.filter(p => !p.spectator);
+      if (Object.keys(room.answers).length >= activePlayers.length) broadcastReview(roomId);
     }
   });
 
-  // 방장이 점수 확정 후 다음 라운드 or 게임 종료
+  // ── 점수 확정 ────────────────────────────────────────
   socket.on('confirm_scores', (roundScores) => {
-    // roundScores: { socketId: points }
+    // roundScores: { nickname/teamName: points }
     const roomId = socket.data.roomId;
     const room = getRoom(roomId);
     if (!room || socket.id !== room.hostId) return;
 
-    Object.entries(roundScores).forEach(([pid, pts]) => {
-      room.scores[pid] = (room.scores[pid] ?? 0) + pts;
+    const roundPts = {};
+    Object.entries(roundScores).forEach(([key, pts]) => {
+      room.scores[key] = (room.scores[key] ?? 0) + pts;
+      roundPts[key] = pts;
     });
 
-    const isLastRound = room.round >= TOTAL_ROUNDS;
+    room.roundHistory.push({ round: room.round, letter: room.letter, scores: roundPts });
+
+    const isLastRound = room.round >= room.totalRounds;
     room.phase = isLastRound ? 'finished' : 'lobby';
 
     io.to(roomId).emit('scores_updated', {
-      scores: room.scores,
       players: roomSummary(room),
       isLastRound,
       round: room.round,
+      roundHistory: room.roundHistory,
     });
   });
 
-  // 연결 해제
+  // ── 연결 해제 ────────────────────────────────────────
   socket.on('disconnect', () => {
     const roomId = socket.data.roomId;
     const room = getRoom(roomId);
     if (!room) return;
 
     room.players = room.players.filter(p => p.id !== socket.id);
+    if (room.players.length === 0) { delete rooms[roomId]; return; }
 
-    if (room.players.length === 0) {
-      delete rooms[roomId];
-      return;
-    }
-
-    // 방장이 나갔으면 다음 사람에게 위임
     if (room.hostId === socket.id) {
       room.hostId = room.players[0].id;
       io.to(room.hostId).emit('host_transferred');
     }
-
     io.to(roomId).emit('player_left', { players: roomSummary(room) });
   });
 });
+
+// ── 리뷰 브로드캐스트 ────────────────────────────────
+function broadcastReview(roomId) {
+  const room = rooms[roomId];
+  room.phase = 'review';
+
+  const compiled = {};
+  CATEGORIES.forEach(cat => { compiled[cat.id] = []; });
+
+  if (room.mode === 'team') {
+    const teams = [...new Set(room.players.filter(p => !p.spectator).map(p => p.nickname))];
+    teams.forEach(team => {
+      const ans = room.answers[team] ?? {};
+      CATEGORIES.forEach(cat => {
+        compiled[cat.id].push({ id: team, nickname: team, answer: (ans[cat.id] ?? '').trim() });
+      });
+    });
+  } else {
+    room.players.filter(p => !p.spectator).forEach(p => {
+      const ans = room.answers[p.id] ?? {};
+      CATEGORIES.forEach(cat => {
+        compiled[cat.id].push({ id: p.id, nickname: p.nickname, answer: (ans[cat.id] ?? '').trim() });
+      });
+    });
+  }
+
+  io.to(roomId).emit('review_started', {
+    letter: room.letter,
+    compiled,
+    categories: CATEGORIES,
+    stopperId: room.stopper,
+    stopperNickname: room.players.find(p => p.id === room.stopperSocketId)?.nickname ?? '',
+  });
+}
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`서버 실행 중: http://localhost:${PORT}`));
