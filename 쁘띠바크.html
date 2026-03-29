@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로컬 쁘띠바크 게임</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 기본 폰트 설정 및 배경 */
+        :root {
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border-radius: 1rem;
+        }
+        input[type="text"] {
+            border: 1px solid #d1d5db;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div id="app" class="w-full max-w-xl bg-white card p-6 space-y-6">
+        <h1 class="text-3xl font-extrabold text-indigo-700 text-center">로컬 쁘띠바크 (7라운드)</h1>
+        
+        <!-- 1. 게임 설정 및 시작 -->
+        <div id="setup-area" class="space-y-4 border-b pb-4">
+            
+            <!-- NEW: 게임 설명 및 규칙 (느린 제출자 모드로 수정) -->
+            <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
+                <h2 class="text-xl font-bold text-gray-800 border-b pb-1">📄 쁘띠바크 게임 설명</h2>
+                <div class="space-y-1 text-sm text-gray-700">
+                    <p class="font-semibold">게임 목표:</p>
+                    <ul class="list-disc list-inside ml-2 space-y-0.5">
+                        <li>주어진 '시작 글자(초성)'로 시작하는 6가지 카테고리의 단어를 빠르게 작성해야 합니다.</li>
+                        <li>모두 작성 후 <span class="font-bold text-red-600">STOP!</span> 버튼을 눌러 답변을 제출하고 시간을 기록합니다.</li>
+                    </ul>
+                    
+                    <!-- 채점 방식 설명 (느린 제출자 모드로 수정) -->
+                    <p class="font-semibold mt-2">채점 방식 (유효 답변당 10점):</p>
+                    <ul class="list-disc list-inside ml-2 space-y-2">
+                        
+                        <!-- 가장 빠른 제출자 모드 -->
+                        <li><span class="font-bold text-yellow-600">🏆 가장 빠른 제출자 모드:</span>
+                            <ul class="list-circle list-inside ml-4 space-y-0.5 mt-0.5 text-gray-700">
+                                <li class="font-bold text-green-700">✅ 유효 조건 1: 시작 글자 일치</li>
+                                <li class="font-bold text-green-700">✅ 유효 조건 2: 중복 없음 (다른 친구의 답변과 중복되지 않아야 함 - 오프라인 확인)</li>
+                                <li class="font-bold mt-1">➡️ 위 두 조건을 만족하는 답변 1개당 <span class="text-green-700">10점</span> 부여</li>
+                            </ul>
+                        </li>
+
+                        <!-- 느린 제출자 모드 (수정됨) -->
+                        <li><span class="font-bold text-gray-700">👍 느린 제출자 모드:</span>
+                            <ul class="list-circle list-inside ml-4 space-y-0.5 mt-0.5 text-gray-700">
+                                <li class="font-bold text-green-700">✅ 유효 조건 1: 시작 글자 일치</li>
+                                <li class="font-bold text-green-700">✅ 유효 조건 2: 답변 일치 (가장 빠른 제출자의 답변과 동일해야 함 - 오프라인 확인)</li>
+                                <li class="font-bold mt-1">➡️ 위 두 조건을 만족하는 답변 1개당 <span class="text-green-700">10점</span> 부여</li>
+                            </ul>
+                        </li>
+                        
+                        <!-- 무효 처리 -->
+                        <li class="mt-2"><span class="font-bold text-red-700">🚫 무효 처리 (0점):</span>
+                            <ul class="list-circle list-inside ml-4 space-y-0.5 mt-0.5 text-gray-700">
+                                 <li>시작 글자 불일치, 오답, 선택 모드에 따른 유효 조건 미충족 답변</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <!-- END: 게임 설명 및 규칙 -->
+
+            <!-- 안내 문구: 디자인 강조 및 글자 크기 증가 -->
+            <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+                <p class="text-gray-700 text-center text-base font-medium">
+                    친구들과 같은 <span class="font-extrabold text-indigo-700">"코드 ID"</span>를 입력하여 게임을 시작하면,<br>모두에게 <span class="font-extrabold text-indigo-700">"같은 시작 글자"</span>가 주어집니다.
+                </p>
+            </div>
+
+            <div class="space-y-2">
+                <label for="code-id" class="block text-lg font-semibold text-gray-700">공유 코드 ID 입력:</label>
+                <input type="text" id="code-id" placeholder="친구들과 공유할 코드 (예: APPLE)" class="w-full text-center text-xl p-3 border-2 border-indigo-300 focus:border-indigo-500 rounded-lg">
+            </div>
+            <button id="start-button" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition duration-150 shadow-lg">
+                게임 시작!
+            </button>
+        </div>
+
+        <!-- 2. 게임 진행 영역 -->
+        <div id="game-area" class="hidden space-y-6">
+            <div class="text-lg font-bold text-center text-gray-700 p-2 bg-gray-100 rounded-lg">
+                라운드: <span id="round-display" class="2xl font-extrabold text-purple-600">1</span> / 7
+            </div>
+            <div class="flex justify-between items-center p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                <div class="text-xl font-bold text-gray-700">시작 글자: <span id="current-letter" class="text-4xl font-extrabold text-indigo-600 ml-2">?</span></div>
+                <!-- 타이머를 경과 시간으로 변경 -->
+                <div class="text-xl font-bold text-gray-700">경과 시간: <span id="stopwatch-display" class="text-4xl font-extrabold text-red-600 ml-2">0.00</span>초</div>
+            </div>
+
+            <!-- 카테고리 입력 테이블 -->
+            <div id="category-inputs" class="space-y-3">
+                <!-- 여기에 카테고리 입력 필드가 동적으로 생성됩니다. -->
+            </div>
+
+            <!-- STOP! 버튼 (이제 유일한 버튼이므로 w-full) -->
+            <button id="stop-button" class="w-full py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition duration-150 shadow-lg disabled:bg-gray-400">
+                STOP! (답변 제출 및 시간 측정 종료)
+            </button>
+        </div>
+
+        <!-- 3. 클레임/선택 영역 (제출 후 나타남) -->
+        <div id="claim-area" class="hidden p-6 bg-blue-50 border border-blue-300 rounded-lg space-y-4 text-center">
+            <h2 class="text-2xl font-bold text-blue-800">2. 채점 모드 선택</h2>
+            <p class="text-md font-semibold text-gray-700">제출 완료! 경과 시간: <span id="final-time" class="text-blue-600"></span>초</p>
+            <p class="text-lg font-semibold text-gray-700">어떤 채점 모드를 선택하시겠습니까?</p>
+            <p class="text-sm text-gray-500">
+                (점수 계산은 유효 답변당 10점으로 동일하나, 역할 구분을 위해 선택합니다.)
+            </p>
+            <div class="flex space-x-4">
+                <button id="claim-fastest-button" class="w-1/2 py-3 bg-yellow-500 text-white font-bold rounded-lg hover:bg-yellow-600 transition duration-150 shadow-lg">
+                    🏆 내가 가장 빠른 제출자다
+                </button>
+                <button id="claim-standard-button" class="w-1/2 py-3 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-150 shadow-lg">
+                    👍 나는 느린 제출자다
+                </button>
+            </div>
+        </div>
+        
+        <!-- 4. 셀프 채점 영역 (Self-Correction) -->
+        <div id="scoring-area" class="hidden p-6 bg-purple-50 border border-purple-300 rounded-lg space-y-4">
+            <h2 class="text-2xl font-bold text-purple-800 text-center">3. 셀프 채점: 답변 유효성 확인</h2>
+            <p id="scoring-mode-display" class="text-md font-semibold text-center text-purple-700"></p>
+            <p class="text-sm text-gray-600 text-center">
+                친구들과 오프라인으로 중복, 오답 여부를 확인한 후, 각 답변의 점수(<span class="font-bold text-green-700">10점/0점</span>)를 최종적으로 결정하십시오.
+            </p>
+
+            <div id="scoring-inputs" class="space-y-3">
+                <!-- Dynamic scoring rows will go here -->
+            </div>
+
+            <button id="finalize-button" class="w-full py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition duration-150 shadow-lg">
+                점수 확정 및 라운드 종료
+            </button>
+        </div>
+
+        <!-- 5. 결과 영역 (라운드 및 최종 결과 모두 표시) -->
+        <div id="result-area" class="hidden p-6 bg-yellow-50 border border-yellow-300 rounded-lg space-y-4">
+            <h2 id="result-title" class="text-2xl font-bold text-yellow-800 text-center">라운드 종료!</h2>
+            <p id="round-score" class="text-xl font-bold text-center text-yellow-700">이번 라운드 점수: 0점</p>
+            <p id="total-score-display" class="text-3xl font-extrabold text-center text-yellow-900">총 점수: 0점</p>
+            <p id="scoring-mode-info" class="text-md font-semibold text-center text-gray-700"></p>
+            <p class="text-sm text-center text-gray-600">이 점수는 당신이 직접 채점한 결과를 기반으로 확정되었습니다.</p>
+            
+            <button id="next-round-button" class="w-full py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition duration-150">
+                다음 라운드 시작 (2/7)
+            </button>
+            <!-- NEW: 중간 게임 종료 버튼 추가 -->
+            <button id="end-game-button" class="hidden w-full py-2 bg-red-800 text-white font-bold rounded-lg hover:bg-red-900 transition duration-150 mt-2">
+                게임 종료 (총 점수 계산)
+            </button>
+            
+            <button id="final-result-button" class="hidden w-full py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition duration-150">
+                최종 결과 확인!
+            </button>
+            <button id="restart-button" class="w-full py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-150 mt-2">
+                새 게임 시작
+            </button>
+        </div>
+
+    </div> <!-- end of div#app -->
+
+    <!-- 만든 사람 및 문의 정보 -->
+    <footer class="mt-8 text-center text-sm text-gray-500">
+        <p>만든 사람: 경기도 지구과학 교사 뀨짱 이윤규</p>
+        <p>문의: <a href="https://open.kakao.com/o/s7hVU65h" target="_blank" class="text-indigo-600 hover:text-indigo-800 font-semibold">개발자 오픈채팅으로 연락하기</a></p>
+    </footer>
+
+    <script type="module">
+        // 초성 리스트 (한국어 쁘띠바크에 사용되는 글자)
+        const KOREAN_INITIAL_CONSONANTS = [
+            'ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'
+        ];
+        
+        // 게임 카테고리 (유명인/역사적 인물, 스포츠로 변경됨)
+        const CATEGORIES = [
+            { id: 'name', name: '유명인/역사적 인물' },
+            { id: 'animal', name: '동물' },
+            { id: 'city', name: '도시/나라 이름' },
+            { id: 'food', name: '음식/요리' },
+            { id: 'thing', name: '물건/도구' },
+            { id: 'sport', name: '스포츠' }
+        ];
+        const TOTAL_ROUNDS = 7; // 총 라운드 수
+
+        /**
+         * 주어진 한국어 단어의 첫 글자에서 초성(initial consonant)을 추출합니다.
+         * @param {string} word - 한국어 단어
+         * @returns {string | null} - 추출된 초성, 또는 한글이 아니거나 빈 문자열이면 null
+         */
+        function getInitialConsonant(word) {
+            if (!word || word.length === 0) return null;
+
+            const firstChar = word.charCodeAt(0);
+            const HANGUL_START = 0xAC00; // '가'
+            const HANGUL_END = 0xD7A3;   // '힣'
+
+            // 완성형 한글 범위 확인
+            if (firstChar < HANGUL_START || firstChar > HANGUL_END) {
+                // 한글이 아니면 null 반환
+                return null; 
+            }
+
+            const offset = firstChar - HANGUL_START;
+            // 초성 인덱스 계산: (글자 코드 - '가' 코드) / 588
+            const chosungIndex = Math.floor(offset / 588);
+
+            // 19개의 초성 리스트 (완성형 한글 구조에 사용됨)
+            const FULL_CHOSUNG_LIST = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+            
+            if (chosungIndex >= 0 && chosungIndex < FULL_CHOSUNG_LIST.length) {
+                return FULL_CHOSUNG_LIST[chosungIndex];
+            }
+            return null;
+        }
+
+        // 게임 상태 변수
+        let gameActive = false;
+        let stopwatchId = null;
+        let startTime = 0;
+        let elapsedTimeSeconds = 0; 
+        let currentScoringMode = false; // true: Fastest Claimed, false: Standard (now Slower)
+        let currentRound = 1; // 현재 라운드
+        let totalScore = 0; // 누적 점수
+
+        // DOM 요소
+        const setupArea = document.getElementById('setup-area');
+        const codeIdInput = document.getElementById('code-id');
+        const startButton = document.getElementById('start-button');
+        const gameArea = document.getElementById('game-area');
+        const currentLetterSpan = document.getElementById('current-letter');
+        const stopwatchDisplay = document.getElementById('stopwatch-display');
+        const categoryInputsDiv = document.getElementById('category-inputs');
+        const stopButton = document.getElementById('stop-button');
+        const claimArea = document.getElementById('claim-area');
+        const finalTimeDisplay = document.getElementById('final-time');
+        const claimFastestButton = document.getElementById('claim-fastest-button');
+        const claimStandardButton = document.getElementById('claim-standard-button');
+        const scoringArea = document.getElementById('scoring-area');
+        const scoringModeDisplay = document.getElementById('scoring-mode-display');
+        const scoringInputsDiv = document.getElementById('scoring-inputs');
+        const finalizeButton = document.getElementById('finalize-button');
+        const resultArea = document.getElementById('result-area');
+        const resultTitle = document.getElementById('result-title');
+        const roundDisplay = document.getElementById('round-display');
+        const roundScoreDisplay = document.getElementById('round-score');
+        const totalScoreDisplay = document.getElementById('total-score-display');
+        const scoringModeInfo = document.getElementById('scoring-mode-info');
+        const nextRoundButton = document.getElementById('next-round-button');
+        const endGameButton = document.getElementById('end-game-button'); // NEW: 중간 종료 버튼
+        const finalResultButton = document.getElementById('final-result-button');
+        const restartButton = document.getElementById('restart-button');
+
+
+        /**
+         * 코드 ID 문자열을 기반으로 결정론적(Deterministic) 숫자를 생성합니다.
+         */
+        function stringToSeed(str) {
+            let hash = 0;
+            if (str.length === 0) return 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash |= 0; 
+            }
+            return Math.abs(hash);
+        }
+
+        /**
+         * 시드 값과 라운드 번호를 결합하여 라운드별로 다른 시작 글자(초성)를 결정론적으로 선택합니다.
+         * @param {number} seed - 초기 시드 값
+         * @param {number} round - 현재 라운드 번호
+         * @returns {string} - 선택된 한국어 초성
+         */
+        function generateLetter(seed, round) {
+            // 시드와 라운드 번호를 합친 값으로 인덱스를 결정합니다.
+            const uniqueSeed = seed + round; 
+            const index = uniqueSeed % KOREAN_INITIAL_CONSONANTS.length;
+            return KOREAN_INITIAL_CONSONANTS[index];
+        }
+        
+        /**
+         * 카테고리 입력 필드를 동적으로 생성합니다.
+         */
+        function createInputFields() {
+            categoryInputsDiv.innerHTML = '';
+            CATEGORIES.forEach(category => {
+                const container = document.createElement('div');
+                container.className = 'flex items-center space-x-3';
+                
+                const label = document.createElement('label');
+                label.className = 'w-1/3 text-md font-semibold text-gray-700';
+                label.textContent = category.name;
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = `input-${category.id}`;
+                input.placeholder = `답변을 입력하세요...`;
+                input.className = 'w-2/3';
+                input.maxLength = 20;
+                input.autocomplete = "off";
+
+                container.appendChild(label);
+                container.appendChild(input);
+                categoryInputsDiv.appendChild(container);
+            });
+        }
+
+        /**
+         * 경과 시간(스톱워치)을 시작합니다.
+         */
+        function startStopwatch() {
+            startTime = Date.now();
+            stopButton.disabled = false;
+            stopwatchDisplay.textContent = '0.00';
+            
+            stopwatchId = setInterval(() => {
+                const now = Date.now();
+                const elapsedMs = now - startTime;
+                elapsedTimeSeconds = (elapsedMs / 1000).toFixed(2);
+                stopwatchDisplay.textContent = elapsedTimeSeconds;
+
+                // 시각적 피드백
+                if (parseFloat(elapsedTimeSeconds) <= 10) {
+                    stopwatchDisplay.classList.add('text-blue-600');
+                    stopwatchDisplay.classList.remove('text-red-600');
+                } else {
+                    stopwatchDisplay.classList.remove('text-blue-600');
+                    stopwatchDisplay.classList.add('text-red-600');
+                }
+            }, 100);
+        }
+
+        /**
+         * 경과 시간 측정을 종료합니다.
+         */
+        function stopStopwatch() {
+            clearInterval(stopwatchId);
+            stopwatchId = null;
+            finalTimeDisplay.textContent = elapsedTimeSeconds;
+        }
+
+        /**
+         * 제출을 완료하고 클레임/선택 단계로 넘어갑니다.
+         */
+        function submitAndClaim() {
+            if (!gameActive) return;
+            gameActive = false;
+            stopStopwatch();
+
+            // 모든 입력 필드 비활성화
+            document.querySelectorAll('#category-inputs input').forEach(input => {
+                input.disabled = true;
+            });
+
+            // UI 전환
+            gameArea.classList.add('hidden');
+            claimArea.classList.remove('hidden');
+        }
+        
+        /**
+         * 최종 결과 화면을 표시하고 게임을 종료합니다.
+         * (7라운드 완료 후 또는 중간 종료 버튼 클릭 시)
+         */
+        function showFinalResults() {
+            // 스톱워치가 혹시라도 돌아가고 있다면 멈춥니다.
+            if (stopwatchId) {
+                stopStopwatch();
+            }
+            gameActive = false;
+            
+            // UI 상태를 최종 결과 모드로 설정
+            resultArea.classList.remove('hidden');
+            setupArea.classList.add('hidden');
+            gameArea.classList.add('hidden');
+            claimArea.classList.add('hidden');
+            scoringArea.classList.add('hidden');
+
+            resultTitle.textContent = `게임 종료! 총 ${currentRound}라운드 진행`;
+            roundScoreDisplay.textContent = `최종 라운드까지 점수가 확정되었습니다.`;
+            totalScoreDisplay.textContent = `최종 총 점수: ${totalScore}점`;
+            scoringModeInfo.textContent = "새 게임을 시작하려면 아래 버튼을 눌러주세요.";
+
+            // 최종 결과에서는 모든 라운드 진행 버튼을 숨기고 재시작 버튼만 표시
+            nextRoundButton.classList.add('hidden');
+            endGameButton.classList.add('hidden');
+            finalResultButton.classList.add('hidden');
+            restartButton.classList.remove('hidden'); 
+        }
+
+
+        /**
+         * 2. 채점 모드 선택 후, 셀프 채점 단계로 진입합니다.
+         * @param {boolean} isFastestClaimed - '가장 빠른 제출자'를 클레임했는지 여부
+         */
+        function startScoring(isFastestClaimed) {
+            currentScoringMode = isFastestClaimed; // 모드 저장
+
+            // 모드 정보 표시 (느린 제출자로 수정)
+            let modeText = isFastestClaimed ? 
+                "🏆 선택 모드: 가장 빠른 제출자" : 
+                "👍 선택 모드: 느린 제출자";
+            scoringModeDisplay.textContent = modeText + " (유효 10점 / 무효 0점)";
+
+            // UI 전환
+            claimArea.classList.add('hidden');
+            scoringArea.classList.remove('hidden');
+
+            // 채점 UI 생성
+            generateScoringUI();
+        }
+
+        /**
+         * 셀프 채점을 위한 UI를 생성하고 기본 점수(10점)를 표시합니다.
+         */
+        function generateScoringUI() {
+            scoringInputsDiv.innerHTML = '';
+            const startingLetter = currentLetterSpan.textContent;
+
+            CATEGORIES.forEach(category => {
+                const inputElement = document.getElementById(`input-${category.id}`);
+                const answer = inputElement ? inputElement.value.trim() : '';
+
+                // 1. 답변이 없는 카테고리는 건너뜜
+                if (!answer) {
+                    return;
+                }
+
+                // **수정된 로직: 답변의 초성을 추출하여 시작 글자와 비교**
+                const initialConsonant = getInitialConsonant(answer);
+                const isCorrectStart = initialConsonant === startingLetter;
+                // **수정된 로직 끝**
+                
+                // 유효하지 않으면 (빈칸이거나 시작 글자 불일치) 초기 상태를 false(무효)로 설정
+                const shouldStartAsValid = isCorrectStart; 
+                
+                // 2. 기본 점수 계산: 유효하면 10점, 무효하면 0점.
+                const basePoints = 10;
+                
+                // 3. UI에 표시될 텍스트 (시작 글자 불일치 경고)
+                let baseDescription = `(확정 시 10점)`;
+                if (!isCorrectStart) {
+                    baseDescription = `<span class="text-red-600">(${startingLetter}로 시작하지 않음)</span> (확정 시 0점)`;
+                }
+                
+                // HTML 요소 생성
+                const row = document.createElement('div');
+                row.className = 'scoring-row flex flex-col sm:flex-row items-center justify-between p-3 bg-white rounded-lg border shadow-sm transition duration-200';
+                row.dataset.categoryId = category.id;
+                // 초기 상태 설정
+                row.dataset.valid = shouldStartAsValid ? 'true' : 'false'; 
+                row.dataset.baseScore = basePoints; 
+
+                row.innerHTML = `
+                    <div class="w-full sm:w-1/3 mb-2 sm:mb-0">
+                        <p class="font-semibold text-gray-700">${category.name}</p>
+                        <p class="text-xs text-gray-400">${baseDescription}</p>
+                    </div>
+                    <div class="w-full sm:w-1/3 text-lg font-bold text-center text-indigo-600 truncate mb-2 sm:mb-0">
+                        ${answer}
+                    </div>
+                    <div class="w-full sm:w-1/3 flex space-x-2">
+                        <button class="valid-btn flex-1 py-2 px-2 text-sm font-bold rounded-lg transition duration-150" data-valid-state="true">
+                            ✔ 유효 (10점)
+                        </button>
+                        <button class="invalid-btn flex-1 py-2 px-2 text-sm font-bold rounded-lg transition duration-150" data-valid-state="false">
+                            ❌ 무효 (0점)
+                        </button>
+                    </div>
+                `;
+
+                // 버튼 이벤트 리스너 추가
+                const validBtn = row.querySelector('.valid-btn');
+                const invalidBtn = row.querySelector('.invalid-btn');
+
+                const updateValidityState = (isValid) => {
+                    row.dataset.valid = isValid ? 'true' : 'false';
+                    row.classList.toggle('border-green-500', isValid);
+                    row.classList.toggle('border-red-500', !isValid);
+
+                    if (isValid) {
+                        validBtn.classList.remove('bg-gray-300', 'text-gray-700');
+                        validBtn.classList.add('bg-green-500', 'text-white');
+                        invalidBtn.classList.add('bg-gray-300', 'text-gray-700');
+                        invalidBtn.classList.remove('bg-red-500', 'text-white');
+                    } else {
+                        validBtn.classList.add('bg-gray-300', 'text-gray-700');
+                        validBtn.classList.remove('bg-green-500', 'text-white');
+                        invalidBtn.classList.remove('bg-gray-300', 'text-gray-700');
+                        invalidBtn.classList.add('bg-red-500', 'text-white');
+                    }
+                };
+
+                // 초기 상태 설정: isCorrectStart 여부에 따라 시작
+                updateValidityState(shouldStartAsValid); 
+
+                validBtn.addEventListener('click', () => updateValidityState(true));
+                invalidBtn.addEventListener('click', () => updateValidityState(false));
+
+                scoringInputsDiv.appendChild(row);
+            });
+        }
+
+        /**
+         * 3. 셀프 채점 결과를 바탕으로 최종 점수를 확정하고 라운드 상태를 업데이트합니다.
+         */
+        function finalizeScore() {
+            let roundTotalScore = 0;
+            
+            const scoringRows = scoringInputsDiv.querySelectorAll('.scoring-row');
+            
+            scoringRows.forEach(row => {
+                const isValid = row.dataset.valid === 'true';
+                // baseScore는 10점으로 고정
+                const baseScore = parseInt(row.dataset.baseScore, 10); 
+
+                if (isValid) {
+                    roundTotalScore += baseScore;
+                } 
+                // 무효(false)인 답변은 0점.
+            });
+
+            // 총점에 현재 라운드 점수를 더합니다.
+            totalScore += roundTotalScore;
+
+            // 점수 표시
+            roundScoreDisplay.textContent = `이번 라운드 점수: ${roundTotalScore}점`;
+            totalScoreDisplay.textContent = `총 점수: ${totalScore}점`;
+
+            // 채점 모드 정보 표시 (느린 제출자로 수정)
+            const isFastestClaimed = currentScoringMode;
+            let modeText = isFastestClaimed ? 
+                "🏆 선택 모드: 가장 빠른 제출자" : 
+                "👍 선택 모드: 느린 제출자";
+            scoringModeInfo.textContent = modeText + " (라운드 점수: 유효 답변 당 10점)";
+
+            // UI 전환: 셀프 채점 영역 숨기기, 결과 영역 표시
+            scoringArea.classList.add('hidden');
+            resultArea.classList.remove('hidden');
+
+            // 라운드 진행/종료 버튼 설정
+            if (currentRound < TOTAL_ROUNDS) {
+                // 라운드 진행 중
+                resultTitle.textContent = `${currentRound}라운드 종료!`;
+                nextRoundButton.classList.remove('hidden');
+                nextRoundButton.textContent = `다음 라운드 시작 (${currentRound + 1}/${TOTAL_ROUNDS})`;
+                
+                // 중간 종료 버튼 표시
+                endGameButton.classList.remove('hidden'); 
+
+                finalResultButton.classList.add('hidden');
+            } else {
+                // 최종 라운드 완료 (currentRound == TOTAL_ROUNDS)
+                resultTitle.textContent = `${TOTAL_ROUNDS}라운드 완료! 최종 결과`;
+                
+                nextRoundButton.classList.add('hidden');
+                endGameButton.classList.add('hidden'); // 중간 종료 버튼 숨김
+                
+                finalResultButton.classList.remove('hidden'); // 최종 결과 확인 버튼 표시
+                
+                // 최종 결과 확인 버튼 클릭 시 showFinalResults 호출
+                finalResultButton.addEventListener('click', showFinalResults, { once: true });
+            }
+        }
+
+        /**
+         * 다음 라운드를 시작합니다.
+         */
+        function nextRound() {
+            currentRound++;
+            
+            // UI 초기화 및 업데이트
+            setupArea.classList.add('hidden');
+            resultArea.classList.add('hidden');
+            gameArea.classList.remove('hidden');
+
+            roundDisplay.textContent = currentRound;
+
+            // 새로운 시작 글자 생성
+            const codeId = codeIdInput.value.trim();
+            const seed = stringToSeed(codeId);
+            const selectedLetter = generateLetter(seed, currentRound);
+            currentLetterSpan.textContent = selectedLetter;
+            
+            // 입력 필드 초기화 및 다시 생성
+            createInputFields();
+            
+            // 상태 업데이트
+            gameActive = true;
+            
+            // 스톱워치 재시작
+            startStopwatch();
+        }
+
+        /**
+         * 새 게임을 시작합니다. (전체 초기화)
+         */
+        function startGame() {
+            const codeId = codeIdInput.value.trim();
+            if (!codeId) {
+                console.error('코드 ID를 입력해주세요!');
+                return;
+            }
+
+            // 초기 상태 설정
+            currentRound = 1;
+            totalScore = 0;
+            
+            const seed = stringToSeed(codeId);
+            const selectedLetter = generateLetter(seed, currentRound); // Use round 1
+
+            // 상태 업데이트
+            gameActive = true;
+            
+            // UI 업데이트
+            setupArea.classList.add('hidden');
+            gameArea.classList.remove('hidden');
+            claimArea.classList.add('hidden'); 
+            scoringArea.classList.add('hidden');
+            resultArea.classList.add('hidden'); 
+
+            roundDisplay.textContent = currentRound; // Display round 1
+            currentLetterSpan.textContent = selectedLetter;
+            createInputFields();
+            
+            // 스톱워치 시작
+            startStopwatch();
+        }
+
+        // 이벤트 리스너
+
+        // 1. 게임 시작 버튼
+        startButton.addEventListener('click', startGame);
+
+        // 2. 제출 (STOP!) 버튼 -> 클레임 영역으로 이동
+        stopButton.addEventListener('click', submitAndClaim);
+
+        // 3. 클레임: 가장 빠른 제출자 선택 -> 셀프 채점 영역으로 이동
+        claimFastestButton.addEventListener('click', () => startScoring(true)); 
+
+        // 4. 클레임: 느린 제출자 선택 -> 셀프 채점 영역으로 이동
+        claimStandardButton.addEventListener('click', () => startScoring(false));
+
+        // 5. 점수 확정 버튼 -> 결과 영역으로 이동
+        finalizeButton.addEventListener('click', finalizeScore);
+
+        // 6. 다음 라운드 버튼 -> 다음 라운드 시작
+        nextRoundButton.addEventListener('click', nextRound);
+
+        // 7. 중간 게임 종료 버튼 -> 최종 결과 화면으로 이동
+        endGameButton.addEventListener('click', showFinalResults);
+
+        // 8. 새 게임 시작 버튼 (전체 재시작)
+        restartButton.addEventListener('click', () => {
+            setupArea.classList.remove('hidden');
+            gameArea.classList.add('hidden');
+            claimArea.classList.add('hidden');
+            scoringArea.classList.add('hidden');
+            resultArea.classList.add('hidden');
+            codeIdInput.value = ''; // 코드 ID 초기화
+            stopwatchDisplay.classList.remove('text-blue-600', 'text-red-600');
+            stopwatchDisplay.textContent = '0.00'; // 시간 표시 초기화
+        });
+
+        // 초기 설정
+        document.addEventListener('DOMContentLoaded', () => {
+            startButton.disabled = false;
+            codeIdInput.addEventListener('input', () => {
+                startButton.disabled = codeIdInput.value.trim() === '';
+            });
+        });
+
+    </script>
+</body>
+</html>
