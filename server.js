@@ -212,6 +212,27 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ── STOP 취소: 입력값 복원 후 다시 playing ────────────
+  socket.on('cancel_stop', () => {
+    const roomId = socket.data.roomId;
+    const room = getRoom(roomId);
+    if (!room || socket.id !== room.hostId) return;
+    if (room.phase !== 'review') return;
+
+    room.phase = 'playing';
+    room.stopper = null;
+    room.stopperSocketId = null;
+    room.submittedTeams = new Set();
+
+    // 기존 입력값을 클라이언트에 복원해서 다시 playing 상태로
+    io.to(roomId).emit('stop_cancelled', {
+      answers: room.answers,   // { socketId or teamName: { catId: value } }
+      letter: room.letter,
+      round: room.round,
+      totalRounds: room.totalRounds,
+    });
+  });
+
   // ── 유효/무효 변경 브로드캐스트 (방장 → 전체) ──────
   socket.on('validity_update', ({ catId, playerId, valid }) => {
     const roomId = socket.data.roomId;
@@ -278,7 +299,9 @@ function broadcastReview(roomId) {
   CATEGORIES.forEach(cat => { compiled[cat.id] = []; });
 
   if (room.mode === 'team') {
-    const teams = [...new Set(room.players.filter(p => !p.spectator).map(p => p.nickname))];
+    const teams = [...new Set(room.players
+      .filter(p => !(p.id === room.hostId && room.hostSpectator))
+      .map(p => p.nickname))];
     teams.forEach(team => {
       const ans = room.answers[team] ?? {};
       CATEGORIES.forEach(cat => {
@@ -286,12 +309,14 @@ function broadcastReview(roomId) {
       });
     });
   } else {
-    room.players.filter(p => !p.spectator).forEach(p => {
-      const ans = room.answers[p.id] ?? {};
-      CATEGORIES.forEach(cat => {
-        compiled[cat.id].push({ id: p.id, nickname: p.nickname, answer: (ans[cat.id] ?? '').trim() });
+    room.players
+      .filter(p => !(p.id === room.hostId && room.hostSpectator))
+      .forEach(p => {
+        const ans = room.answers[p.id] ?? {};
+        CATEGORIES.forEach(cat => {
+          compiled[cat.id].push({ id: p.id, nickname: p.nickname, answer: (ans[cat.id] ?? '').trim() });
+        });
       });
-    });
   }
 
   io.to(roomId).emit('review_started', {

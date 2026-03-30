@@ -368,6 +368,7 @@ function renderFinal(players, history) {
 document.getElementById('btn-restart').addEventListener('click', () => showScreen('screen-lobby'));
 document.getElementById('btn-stop').addEventListener('click', () => socket.emit('stop'));
 document.getElementById('btn-start-round').addEventListener('click', () => socket.emit('start_round'));
+document.getElementById('btn-cancel-stop').addEventListener('click', () => socket.emit('cancel_stop'));
 
 // ══════════════════════════════════════════════════════
 // Socket 이벤트
@@ -497,6 +498,37 @@ socket.on('validity_update', ({ catId, playerId, valid }) => {
     }
   }
   updateScorePreview();
+});
+
+// STOP 취소 → 입력값 복원 후 다시 게임 화면
+socket.on('stop_cancelled', ({ answers, letter, round, totalRounds: tr }) => {
+  currentLetter = letter;
+  currentRound  = round;
+  totalRounds   = tr;
+
+  if (hostRole === 'spectate') {
+    document.getElementById('spec-round').textContent  = `${round} / ${tr} 라운드`;
+    document.getElementById('spec-letter').textContent = letter;
+    document.getElementById('spec-stop-notice').classList.add('hidden');
+    showScreen('screen-spectate');
+    return;
+  }
+
+  // 입력값 복원
+  document.getElementById('game-letter').textContent = letter;
+  document.getElementById('game-round-badge').textContent = `${round} / ${tr} 라운드`;
+  document.getElementById('btn-stop').disabled = false;
+  document.getElementById('stop-notice').classList.add('hidden');
+  renderGameInputs();
+
+  // 이전 답변 복원
+  const myAnswers = gameMode === 'team' ? (answers[myTeam] ?? {}) : (answers[myId] ?? {});
+  categories.forEach(cat => {
+    const el = document.getElementById(`ans-${cat.id}`);
+    if (el && myAnswers[cat.id]) el.value = myAnswers[cat.id];
+  });
+
+  showScreen('screen-game');
 });
 
 socket.on('scores_updated', ({ players, isLastRound, roundHistory: rh }) => {
