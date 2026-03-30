@@ -364,10 +364,10 @@
     <span id="review-letter-badge" class="text-sm font-bold text-purple-600 bg-purple-50 px-3 py-1 rounded-full"></span>
   </div>
 
-  <div class="card p-4 w-full text-xs text-slate-500 space-y-1">
-    <p>🟢 <strong class="text-green-700">유효</strong> — 초성 일치, STOP 외친 사람과 중복 없음</p>
-    <p>🔴 <strong class="text-red-600">무효</strong> — 초성 불일치 또는 STOP 외친 사람과 같은 답 (STOP 외친 사람만 0점)</p>
-    <p>🟡 <strong class="text-amber-600">중복(STOP)</strong> — STOP 외친 사람의 답과 동일 → 해당 사람 0점, 나머지 10점</p>
+  <div class="card p-4 w-full text-xs text-slate-500 space-y-1.5">
+    <p>🟢 <strong class="text-green-700">유효 (10점)</strong> — 초성 일치 + 유효한 답변</p>
+    <p>🔴 <strong class="text-red-600">무효 (0점)</strong> — 초성 불일치 또는 빈칸</p>
+    <p>🛑 <strong class="text-pink-600">STOP 중복 (0점)</strong> — STOP 외친 사람의 답과 동일한 답을 적었을 때, <strong>STOP 외친 사람만 0점</strong>. 같은 답을 적은 나머지는 10점.</p>
     <p id="review-host-note" class="text-purple-600 font-semibold mt-1"></p>
   </div>
 

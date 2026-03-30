@@ -49,6 +49,7 @@ function setHostRole(role) {
   hostRole = role;
   document.getElementById('host-play').classList.toggle('active', role === 'play');
   document.getElementById('host-spectate').classList.toggle('active', role === 'spectate');
+  socket.emit('update_settings', { hostSpectator: role === 'spectate' });
 }
 
 document.getElementById('select-rounds')?.addEventListener('change', (e) => {
@@ -251,7 +252,7 @@ function renderReview(data) {
           </div>
           <div class="flex items-center gap-2 shrink-0">
             ${badgeMap[statusKey]}
-            ${hasAnswer ? `<button class="toggle-btn ${toggleClass}" data-valid="${valid}" data-cat="${cat.id}" data-player="${entry.id}">
+      ${hasAnswer && isHost ? `<button class="toggle-btn ${toggleClass}" data-valid="${valid}" data-cat="${cat.id}" data-player="${entry.id}">
               ${valid ? '✔ 유효' : '✘ 무효'}
             </button>` : ''}
           </div>

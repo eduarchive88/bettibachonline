@@ -65,7 +65,7 @@ function roomSummary(room) {
 io.on('connection', (socket) => {
 
   // ── 방 입장 ──────────────────────────────────────────
-  socket.on('join_room', ({ roomId, nickname, mode, totalRounds, spectator }) => {
+  socket.on('join_room', ({ roomId, nickname, mode, totalRounds, spectator, hostSpectator }) => {
     if (!roomId || !nickname) return;
 
     const isNewRoom = !rooms[roomId];
@@ -73,17 +73,18 @@ io.on('connection', (socket) => {
       rooms[roomId] = {
         players: [],
         hostId: socket.id,
+        hostSpectator: hostSpectator ?? false,
         round: 0,
         letter: null,
         phase: 'lobby',
-        answers: {},        // 개인전: { socketId: {catId: ans} } / 모둠전: { teamName: {catId: ans} }
-        scores: {},         // { nickname/teamName: totalScore }
-        stopper: null,      // 이번 라운드 STOP 누른 팀/개인 식별자
+        answers: {},
+        scores: {},
+        stopper: null,
         stopperSocketId: null,
         mode: mode || 'individual',
         totalRounds: totalRounds || 7,
-        roundHistory: [],   // [{ round, letter, scores: {id: pts} }]
-        submittedTeams: new Set(), // 모둠전에서 제출 완료한 팀
+        roundHistory: [],
+        submittedTeams: new Set(),
       };
     }
 
@@ -123,12 +124,13 @@ io.on('connection', (socket) => {
   });
 
   // ── 방장: 설정 업데이트 (라운드 수, 모드) ────────────
-  socket.on('update_settings', ({ totalRounds, mode }) => {
+  socket.on('update_settings', ({ totalRounds, mode, hostSpectator }) => {
     const room = getRoom(socket.data.roomId);
     if (!room || socket.id !== room.hostId) return;
-    if (totalRounds) room.totalRounds = totalRounds;
-    if (mode) room.mode = mode;
-    io.to(socket.data.roomId).emit('settings_updated', { totalRounds: room.totalRounds, mode: room.mode });
+    if (totalRounds !== undefined) room.totalRounds = totalRounds;
+    if (mode !== undefined) room.mode = mode;
+    if (hostSpectator !== undefined) room.hostSpectator = hostSpectator;
+    io.to(socket.data.roomId).emit('settings_updated', { totalRounds: room.totalRounds, mode: room.mode, hostSpectator: room.hostSpectator });
   });
 
   // ── 방장: 라운드 시작 ────────────────────────────────
@@ -197,12 +199,15 @@ io.on('connection', (socket) => {
       room.submittedTeams.add(team);
       room.answers[team] = answers;
 
-      // 모든 팀이 제출했는지 확인
-      const teams = [...new Set(room.players.filter(p => !p.spectator).map(p => p.nickname))];
-      if (room.submittedTeams.size >= teams.length) broadcastReview(roomId);
+      // 모든 팀이 제출했는지 확인 (방장 관전 시 방장 팀 제외)
+      const allTeams = [...new Set(room.players
+        .filter(p => !(p.id === room.hostId && room.hostSpectator))
+        .map(p => p.nickname))];
+      if (room.submittedTeams.size >= allTeams.length) broadcastReview(roomId);
     } else {
       room.answers[socket.id] = answers;
-      const activePlayers = room.players.filter(p => !p.spectator);
+      // 방장 관전 시 방장 제외
+      const activePlayers = room.players.filter(p => !(p.id === room.hostId && room.hostSpectator));
       if (Object.keys(room.answers).length >= activePlayers.length) broadcastReview(roomId);
     }
   });
