@@ -212,6 +212,14 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ── 유효/무효 변경 브로드캐스트 (방장 → 전체) ──────
+  socket.on('validity_update', ({ catId, playerId, valid }) => {
+    const roomId = socket.data.roomId;
+    const room = getRoom(roomId);
+    if (!room || socket.id !== room.hostId) return;
+    socket.to(roomId).emit('validity_update', { catId, playerId, valid });
+  });
+
   // ── 점수 확정 ────────────────────────────────────────
   socket.on('confirm_scores', (roundScores) => {
     // roundScores: { nickname/teamName: points }

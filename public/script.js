@@ -291,6 +291,8 @@ function renderReview(data) {
       }
 
       updateScorePreview();
+      // 방장이 변경한 유효/무효를 모든 클라이언트에 브로드캐스트
+      socket.emit('validity_update', { catId, playerId, valid: newValid });
     });
   });
 
@@ -446,7 +448,8 @@ socket.on('team_input_update', ({ team, catId, value }) => {
 socket.on('collect_answers', ({ stopperNickname }) => {
   const msg = `${stopperNickname} 님이 STOP을 눌렀습니다! 답변 제출 중…`;
 
-  if (isSpectator || hostRole === 'spectate') {
+  if (hostRole === 'spectate') {
+    // 관전 방장: 알림만 표시, 제출 없음 (서버도 카운트 안 함)
     const n = document.getElementById('spec-stop-notice');
     n.textContent = msg; n.classList.remove('hidden');
     return;
@@ -455,8 +458,7 @@ socket.on('collect_answers', ({ stopperNickname }) => {
   lockGameInputs();
   const n = document.getElementById('stop-notice');
   n.textContent = msg; n.classList.remove('hidden');
-
-  if (!isSpectator) socket.emit('submit_answers', collectMyAnswers());
+  socket.emit('submit_answers', collectMyAnswers());
 });
 
 socket.on('review_started', (data) => {
@@ -466,6 +468,25 @@ socket.on('review_started', (data) => {
     return;
   }
   renderReview(data);
+});
+
+// 방장이 토글한 유효/무효 수신 (게스트)
+socket.on('validity_update', ({ catId, playerId, valid }) => {
+  if (isHost) return; // 방장은 본인이 이미 반영함
+  if (!validityMap[catId]) return;
+  validityMap[catId][playerId] = valid;
+
+  // UI 업데이트
+  const row = document.querySelector(`.review-row[data-cat="${catId}"][data-player="${playerId}"]`);
+  if (row) {
+    row.className = `review-row ${valid ? 'valid' : 'invalid'}`;
+    const badge = row.querySelector('.badge');
+    if (badge) {
+      badge.className = `badge ${valid ? 'badge-valid' : 'badge-invalid'}`;
+      badge.textContent = valid ? '✔ 유효' : '✘ 무효';
+    }
+  }
+  updateScorePreview();
 });
 
 socket.on('scores_updated', ({ players, isLastRound, roundHistory: rh }) => {
