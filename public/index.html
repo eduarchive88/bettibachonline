@@ -391,16 +391,23 @@
      SCREEN 5 · 최종 결과
 ════════════════════════════════════════ -->
 <div id="screen-final" class="screen flex-col items-center w-full max-w-2xl gap-5 pt-8">
-  <div class="text-center">
-    <div class="text-5xl mb-2">🏆</div>
-    <h2 class="text-3xl font-black text-slate-800">게임 종료!</h2>
-    <p class="text-slate-400 text-sm mt-1">최종 결과</p>
+
+  <!-- 우승자 축하 배너 -->
+  <div id="winner-banner" class="w-full text-center card p-8 space-y-3 relative overflow-hidden" style="background: linear-gradient(135deg, #fdf4ff, #eff6ff, #fdf4ff); border-top: 4px solid #a78bfa;">
+    <div class="text-6xl animate-bounce">🏆</div>
+    <p class="text-slate-400 text-sm font-semibold tracking-widest uppercase">Winner</p>
+    <h2 id="winner-name" class="text-4xl font-black" style="background: linear-gradient(135deg, #7c3aed, #ec4899, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"></h2>
+    <p id="winner-score" class="text-xl font-bold text-purple-600"></p>
+    <div class="flex justify-center gap-1 text-2xl mt-1" id="winner-confetti">🎉✨🎊✨🎉</div>
   </div>
+
   <div class="card p-5 w-full space-y-3">
     <p class="font-bold text-slate-700 text-sm">📊 최종 점수표</p>
     <div class="table-wrap" id="final-score-table-wrap"></div>
   </div>
+
   <div id="final-podium" class="card p-5 w-full space-y-2"></div>
+
   <button id="btn-restart" class="btn btn-gray w-full">🔄 새 게임 시작</button>
 
   <footer class="text-center text-xs text-slate-400 space-y-1 pt-2">

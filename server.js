@@ -222,15 +222,21 @@ io.on('connection', (socket) => {
 
   // ── 점수 확정 ────────────────────────────────────────
   socket.on('confirm_scores', (roundScores) => {
-    // roundScores: { nickname/teamName: points }
+    // roundScores: { socketId(개인전) or teamName(모둠전): points }
     const roomId = socket.data.roomId;
     const room = getRoom(roomId);
     if (!room || socket.id !== room.hostId) return;
 
     const roundPts = {};
     Object.entries(roundScores).forEach(([key, pts]) => {
-      room.scores[key] = (room.scores[key] ?? 0) + pts;
-      roundPts[key] = pts;
+      // 개인전: key가 socketId → nickname으로 변환해서 저장
+      let nameKey = key;
+      if (room.mode === 'individual') {
+        const player = room.players.find(p => p.id === key);
+        if (player) nameKey = player.nickname;
+      }
+      room.scores[nameKey] = (room.scores[nameKey] ?? 0) + pts;
+      roundPts[nameKey] = pts;
     });
 
     room.roundHistory.push({ round: room.round, letter: room.letter, scores: roundPts });

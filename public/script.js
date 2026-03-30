@@ -344,12 +344,19 @@ document.getElementById('btn-confirm-scores').addEventListener('click', () => {
 function renderFinal(players, history) {
   renderScoreTable('final-score-table-wrap', players, history);
 
-  const sorted  = [...players].sort((a, b) => b.score - a.score);
-  const medals  = ['🥇','🥈','🥉'];
+  const sorted = [...players].sort((a, b) => b.score - a.score);
+  const winner = sorted[0];
+
+  // 우승자 배너
+  document.getElementById('winner-name').textContent = `👑 ${winner.nickname}`;
+  document.getElementById('winner-score').textContent = `최종 점수 ${winner.score}점`;
+
+  // 순위표
+  const medals = ['🥇','🥈','🥉'];
   document.getElementById('final-podium').innerHTML = `
     <p class="font-bold text-slate-700 text-sm mb-2">🏅 최종 순위</p>
     ${sorted.map((p, i) => `
-      <div class="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
+      <div class="flex justify-between items-center py-2.5 border-b border-slate-100 last:border-0 ${i === 0 ? 'bg-purple-50 rounded-xl px-3' : ''} ">
         <span class="text-base font-bold text-slate-700">${medals[i] ?? `${i+1}.`} ${p.nickname}</span>
         <span class="text-xl font-black text-purple-600">${p.score}점</span>
       </div>
