@@ -314,9 +314,10 @@ function updateScorePreview() {
   });
 
   const container = document.getElementById('review-score-preview');
+  // 모둠전: allPlayers의 id가 팀명(nickname)과 같으므로 nickname으로 조회
   container.innerHTML = allPlayers.map(p => {
-    const id  = p.id ?? p.nickname;
-    const pts = preview[id] ?? 0;
+    const key = p.id ?? p.nickname;          // 개인전: socketId, 모둠전: 팀명
+    const pts = preview[key] ?? preview[p.nickname] ?? 0;
     return `
       <div class="flex justify-between items-center text-sm py-1 border-b border-slate-100 last:border-0">
         <span class="text-slate-600 font-semibold">${p.nickname}</span>
@@ -421,10 +422,11 @@ socket.on('round_started', ({ round, letter, totalRounds: tr }) => {
   currentRound  = round;
   totalRounds   = tr;
 
-  if (isSpectator || hostRole === 'spectate') {
+  if (hostRole === 'spectate') {
     document.getElementById('spec-round').textContent  = `${round} / ${tr} 라운드`;
     document.getElementById('spec-letter').textContent = letter;
     document.getElementById('spec-stop-notice').classList.add('hidden');
+    renderScoreTable('spec-score-table-wrap', allPlayers, roundHistory);
     showScreen('screen-spectate');
     return;
   }
@@ -449,9 +451,10 @@ socket.on('collect_answers', ({ stopperNickname }) => {
   const msg = `${stopperNickname} 님이 STOP을 눌렀습니다! 답변 제출 중…`;
 
   if (hostRole === 'spectate') {
-    // 관전 방장: 알림만 표시, 제출 없음 (서버도 카운트 안 함)
-    const n = document.getElementById('spec-stop-notice');
-    n.textContent = msg; n.classList.remove('hidden');
+    // 관전 방장: 현재 화면에 따라 알림 표시
+    const specNotice = document.getElementById('spec-stop-notice');
+    specNotice.textContent = msg;
+    specNotice.classList.remove('hidden');
     return;
   }
 
@@ -496,12 +499,8 @@ socket.on('scores_updated', ({ players, isLastRound, roundHistory: rh }) => {
   if (isLastRound) {
     renderFinal(players, roundHistory);
   } else {
+    // 관전 방장은 대기실(host-settings 포함)로 이동해야 다음 라운드 시작 가능
     renderWaiting(players, null);
-    if (isSpectator || hostRole === 'spectate') {
-      renderScoreTable('spec-score-table-wrap', players, roundHistory);
-      showScreen('screen-spectate');
-    } else {
-      showScreen('screen-waiting');
-    }
+    showScreen('screen-waiting');
   }
 });
